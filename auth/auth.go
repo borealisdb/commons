@@ -19,6 +19,7 @@ func InitializeAuth(ctx context.Context, issuerUrl, clientID string) (*oidc.Prov
 	// It could be that DEX is not yet ready, thus we retry
 	if err := retry.Do(
 		func() error {
+			// TODO provider url should not hardcoded
 			prvdr, err := oidc.NewProvider(ctx, "http://localhost:5556/borealis/identity")
 			if err != nil {
 				return err

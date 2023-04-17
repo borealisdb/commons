@@ -3,7 +3,7 @@ package constants
 const (
 	DomainName            = "borealisdb.io"
 	AppName               = "borealis"
-	RepositoryName        = "borealis"
+	RepositoryName        = "public.ecr.aws/borealisdb"
 	InfrastructuresHost   = "borealis-service"
 	BackupHost            = "borealis-backup-service"
 	OperatorHost          = "borealis-operator-service"

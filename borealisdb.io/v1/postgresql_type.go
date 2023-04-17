@@ -83,7 +83,7 @@ type Monitoring struct {
 	GrpcCollectorPort    string `json:"grpcCollectorPort,omitempty"`
 	LogLevel             string `json:"logLevel,omitempty"`
 	VictoriaMetricsPort  string `json:"victoriaMetricsPort,omitempty"`
-	BorealisSidecarImage string `json:"borealisSidecarImage,omitempty"`
+	SidecarImage         string `json:"sidecarImage,omitempty"`
 }
 
 type Backup struct {
