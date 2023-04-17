@@ -8,7 +8,12 @@ go-clean:
 	go mod tidy
 build: go-clean codegen
 
-release:
+check.github.token:
+ifndef GITHUB_TOKEN
+	$(error GITHUB_TOKEN is undefined)
+endif
+
+release: check.github.token
 	git tag $(shell svu next)
 	git push --tags
 	goreleaser release --clean
