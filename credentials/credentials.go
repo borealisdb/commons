@@ -2,7 +2,6 @@ package credentials
 
 import (
 	"context"
-	borealisdbv1 "github.com/borealisdb/commons/borealisdb.io/v1"
 )
 
 type Credentials interface {
@@ -15,7 +14,7 @@ type Credentials interface {
 	) (GetPostgresCredentialsResponse, error)
 	GetPostgresSSLRootCert(ctx context.Context, clusterName string, options Options) (GetPostgresSSLRootCertResponse, error)
 	GetClusterCredentials(ctx context.Context, clusterName string, args Options) (GetClusterCredentialsResponse, error)
-	GetClusterInfo(ctx context.Context, clusterName string) (borealisdbv1.Postgresql, error)
+	GetClusterEndpoint(ctx context.Context, clusterName, role string) (GetClusterEndpointResponse, error)
 }
 
 type GetPostgresCredentialsResponse struct {
@@ -34,7 +33,8 @@ type GetPostgresSSLRootCertResponse struct {
 	RootCertBytes []byte `json:"rootCertBytes"`
 }
 
-type Options struct {
-	Namespace               string `json:"namespace"`
-	KubernetesSecretFromEnv bool
+type GetClusterEndpointResponse struct {
+	Endpoint string `json:"endpoint"`
 }
+
+type Options struct{}

@@ -11,6 +11,12 @@ import (
 
 type VM struct{}
 
+func (m VM) GetClusterEndpoint(ctx context.Context, clusterName string, role string) (GetClusterEndpointResponse, error) {
+	return GetClusterEndpointResponse{
+		Endpoint: "localhost",
+	}, nil
+}
+
 func (m VM) Init() error {
 	return nil
 }

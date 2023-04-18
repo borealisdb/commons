@@ -14,6 +14,22 @@ type Kubernetes struct {
 	kubeClient k8sutil.KubernetesClient
 }
 
+func (k *Kubernetes) GetClusterEndpoint(ctx context.Context, clusterName, role string) (GetClusterEndpointResponse, error) {
+	info, err := k.getClusterInfo(ctx, clusterName)
+	if err != nil {
+		return GetClusterEndpointResponse{}, fmt.Errorf("could not getClusterInfo: %v", err)
+	}
+	if role == "replica" {
+		return GetClusterEndpointResponse{
+			Endpoint: fmt.Sprintf("%s-repl.%s.svc.%s", clusterName, info.Namespace, "cluster.local"),
+		}, nil
+	}
+
+	return GetClusterEndpointResponse{
+		Endpoint: fmt.Sprintf("%s.%s.svc.%s", clusterName, info.Namespace, "cluster.local"),
+	}, nil
+}
+
 func (k *Kubernetes) Init() error {
 	kubeClient, err := k8sutil.InitializeKubeClient()
 	if err != nil {
@@ -34,16 +50,13 @@ func (k *Kubernetes) GetPostgresCredentials(
 	username string,
 	options Options,
 ) (GetPostgresCredentialsResponse, error) {
-	if options.Namespace == "" {
-		info, err := k.GetClusterInfo(ctx, clusterName)
-		if err != nil {
-			return GetPostgresCredentialsResponse{}, err
-		}
-		options.Namespace = info.Namespace
+	info, err := k.getClusterInfo(ctx, clusterName)
+	if err != nil {
+		return GetPostgresCredentialsResponse{}, err
 	}
 
 	secretName := constants.GetCredentialSecretNameForCluster(username, clusterName)
-	secret, err := k.kubeClient.Secrets(options.Namespace).Get(ctx, secretName, metav1.GetOptions{})
+	secret, err := k.kubeClient.Secrets(info.Namespace).Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
 		return GetPostgresCredentialsResponse{}, err
 	}
@@ -60,15 +73,13 @@ func (k *Kubernetes) GetPostgresCredentials(
 }
 
 func (k *Kubernetes) GetPostgresSSLRootCert(ctx context.Context, clusterName string, options Options) (GetPostgresSSLRootCertResponse, error) {
-	if options.Namespace == "" {
-		info, err := k.GetClusterInfo(ctx, clusterName)
-		if err != nil {
-			return GetPostgresSSLRootCertResponse{}, err
-		}
-		options.Namespace = info.Namespace
+	info, err := k.getClusterInfo(ctx, clusterName)
+	if err != nil {
+		return GetPostgresSSLRootCertResponse{}, err
 	}
+
 	tlsSecretName := constants.GetTLSSecretName(clusterName)
-	tlsSecret, err := k.kubeClient.Secrets(options.Namespace).Get(ctx, tlsSecretName, metav1.GetOptions{})
+	tlsSecret, err := k.kubeClient.Secrets(info.Namespace).Get(ctx, tlsSecretName, metav1.GetOptions{})
 	if err != nil {
 		return GetPostgresSSLRootCertResponse{}, fmt.Errorf("could not Get Secrets for %v: %v", tlsSecretName, err)
 	}
@@ -79,7 +90,7 @@ func (k *Kubernetes) GetPostgresSSLRootCert(ctx context.Context, clusterName str
 }
 
 func (k *Kubernetes) GetClusterCredentials(ctx context.Context, clusterName string, args Options) (GetClusterCredentialsResponse, error) {
-	info, err := k.GetClusterInfo(ctx, clusterName)
+	info, err := k.getClusterInfo(ctx, clusterName)
 	if err != nil {
 		return GetClusterCredentialsResponse{}, err
 	}
@@ -96,7 +107,7 @@ func (k *Kubernetes) GetClusterCredentials(ctx context.Context, clusterName stri
 	}, err
 }
 
-func (k *Kubernetes) GetClusterInfo(ctx context.Context, clusterName string) (borealisdbv1.Postgresql, error) {
+func (k *Kubernetes) getClusterInfo(ctx context.Context, clusterName string) (borealisdbv1.Postgresql, error) {
 	list, err := k.kubeClient.Postgresqls("").List(ctx, metav1.ListOptions{FieldSelector: fmt.Sprintf("metadata.name=%v", clusterName)})
 	if err != nil {
 		return borealisdbv1.Postgresql{}, err

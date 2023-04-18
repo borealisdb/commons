@@ -28,6 +28,7 @@ const (
 	MonitoringDatabaseImageVersion = "latest"
 
 	BorealisInfrastructuresName = "borealis-infrastructures"
+	PostgresDefaultPort         = "5432"
 )
 
 // Users naming

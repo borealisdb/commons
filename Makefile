@@ -1,6 +1,9 @@
 codegen:
 	hack/update-codegen.sh
 
+mocks:
+	mockgen -source=credentials/credentials.go -package=mocks -destination=mocks/credentials.go
+
 test:
 	go test ./...
 
