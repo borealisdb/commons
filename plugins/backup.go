@@ -7,7 +7,7 @@ import (
 
 func SetBackupDefaults(backup v12.Backup, clusterName string) v12.Backup {
 	if backup.BackupEndpoint == "" {
-		backup.BackupEndpoint = constants.GetDefaultBackupEndpoint()
+		backup.BackupEndpoint = constants.GetDefaultBackupEndpoint("")
 	}
 	if backup.S3BucketName == "" {
 		backup.S3BucketName = clusterName

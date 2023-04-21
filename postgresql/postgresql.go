@@ -41,16 +41,16 @@ type PG struct {
 
 func (pg *PG) GetConnection(ctx context.Context, clusterName string, options Options) (*sqlx.DB, error) {
 	if err := pg.setDefaults(options, clusterName); err != nil {
-		return nil, err
+		return &sqlx.DB{}, err
 	}
 	resp, err := pg.getCredentials(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not GetCredentials: %v", err)
+		return &sqlx.DB{}, fmt.Errorf("could not GetCredentials: %v", err)
 	}
 
 	if pg.options.SSLDownload {
 		if err := pg.downloadSSLRootCert(ctx); err != nil {
-			return nil, fmt.Errorf("could not downloadSSLRootCert: %v", err)
+			return &sqlx.DB{}, fmt.Errorf("could not downloadSSLRootCert: %v", err)
 		}
 	}
 
@@ -61,7 +61,7 @@ func (pg *PG) GetConnection(ctx context.Context, clusterName string, options Opt
 func (pg *PG) Connect(dsn string) (*sqlx.DB, error) {
 	conn, err := sqlx.Open("postgres", dsn)
 	if err != nil {
-		return nil, err
+		return &sqlx.DB{}, err
 	}
 	conn.SetMaxIdleConns(1)
 	conn.SetMaxOpenConns(1)

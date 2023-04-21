@@ -41,8 +41,8 @@ func GetTLSSecretName(clusterName string) string {
 	return fmt.Sprintf("%v-tls", clusterName)
 }
 
-func GetDefaultBackupEndpoint() string {
-	return fmt.Sprintf("http://%v:%v", BackupHost, BackupSystemPort)
+func GetDefaultBackupEndpoint(namespace string) string {
+	return fmt.Sprintf("http://%v.%v.svc.cluster.local:%v", BackupHost, namespace, BackupSystemPort)
 }
 
 func GetImageName(name, version string) string {

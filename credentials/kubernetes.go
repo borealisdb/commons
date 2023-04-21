@@ -6,7 +6,6 @@ import (
 	borealisdbv1 "github.com/borealisdb/commons/borealisdb.io/v1"
 	"github.com/borealisdb/commons/constants"
 	"github.com/borealisdb/commons/k8sutil"
-	"github.com/borealisdb/commons/plugins"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -122,14 +121,5 @@ func (k *Kubernetes) getClusterInfo(ctx context.Context, clusterName string) (bo
 
 func getDefaults(list *borealisdbv1.PostgresqlList) borealisdbv1.Postgresql {
 	cluster := list.Items[0]
-
-	// Adding defaults if fields are empty
-	backup := plugins.SetBackupDefaults(cluster.Spec.Backup, cluster.Name)
-	cluster.Spec.Backup = backup
-
-	if cluster.Spec.ClusterSecretsName == "" {
-		cluster.Spec.ClusterSecretsName = constants.GetClusterSecrets(cluster.Name)
-	}
-
 	return cluster
 }
