@@ -23,7 +23,6 @@ type Postgresql struct {
 
 // PostgresSpec defines the specification for the PostgreSQL TPR.
 type PostgresSpec struct {
-	Patroni   `json:"patroni,omitempty"`
 	Resources `json:"resources,omitempty"`
 
 	ClusterSecretsName string   `json:"clusterSecretsName,omitempty"`
@@ -95,8 +94,7 @@ type Backup struct {
 	BackupRetentionNumber string `json:"backupRetentionNumber,omitempty"`
 	EnableEncryption      string `json:"enableEncryption,omitempty"`
 	OwnEncryptionKey      string `json:"ownEncryptionKey,omitempty"`
-	DeletePolicy          string `json:"deletePolicy,omitempty" defaults:"Snapshot"` // Delete, Retain, Snapshot
-	ClusterSecretsName    string `json:"clusterSecretsName,omitempty"`
+	DeletePolicy          string `json:"deletePolicy,omitempty" defaults:"snapshot"` // delete, retain, snapshot
 
 	RestoreConfig Restore `json:"restoreConfig,omitempty"`
 }

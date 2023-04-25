@@ -29,6 +29,9 @@ const (
 
 	BorealisInfrastructuresName = "borealis-infrastructures"
 	PostgresDefaultPort         = "5432"
+
+	RoleMaster  = "master"
+	RoleReplica = "replica"
 )
 
 // Users naming
@@ -36,6 +39,7 @@ const (
 	AdminUsername       = "postgres"
 	ReplicationUsername = "standby"
 	MonitoringUsername  = "monitoring"
+	BackupUsername      = "backup"
 
 	Migrator                         = "migrator"
 	Application                      = "application"

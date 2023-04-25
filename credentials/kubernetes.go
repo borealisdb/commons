@@ -18,14 +18,9 @@ func (k *Kubernetes) GetClusterEndpoint(ctx context.Context, clusterName, role s
 	if err != nil {
 		return GetClusterEndpointResponse{}, fmt.Errorf("could not getClusterInfo: %v", err)
 	}
-	if role == "replica" {
-		return GetClusterEndpointResponse{
-			Endpoint: fmt.Sprintf("%s-repl.%s.svc.%s", clusterName, info.Namespace, "cluster.local"),
-		}, nil
-	}
 
 	return GetClusterEndpointResponse{
-		Endpoint: fmt.Sprintf("%s.%s.svc.%s", clusterName, info.Namespace, "cluster.local"),
+		Endpoint: constants.GetClusterEndpoint(clusterName, info.Namespace, role),
 	}, nil
 }
 
@@ -67,7 +62,7 @@ func (k *Kubernetes) GetPostgresCredentials(
 	return GetPostgresCredentialsResponse{
 		Username: username,
 		Password: pgPassword,
-		Host:     clusterName,
+		Host:     constants.GetClusterEndpoint(clusterName, info.Namespace, constants.RoleMaster),
 	}, nil
 }
 
@@ -112,7 +107,7 @@ func (k *Kubernetes) getClusterInfo(ctx context.Context, clusterName string) (bo
 		return borealisdbv1.Postgresql{}, err
 	}
 	if len(list.Items) == 0 {
-		return borealisdbv1.Postgresql{}, fmt.Errorf("not cluster found with name %v", clusterName)
+		return borealisdbv1.Postgresql{}, fmt.Errorf("no cluster found with name %v", clusterName)
 	}
 
 	cluster := getDefaults(list)

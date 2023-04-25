@@ -9,8 +9,14 @@ func getNameTemplate(clusterName, mod string) string {
 	return fmt.Sprintf("%v-%v", clusterName, mod)
 }
 
-func GetBackupPath(clusterName string) string {
-	return fmt.Sprintf("s3://%v", clusterName)
+func GetClusterEndpoint(clusterName, namespace, role string) string {
+	if namespace == "" {
+		namespace = "default"
+	}
+	if role == RoleReplica {
+		return fmt.Sprintf("%s-repl.%s.svc.%s", clusterName, namespace, "cluster.local")
+	}
+	return fmt.Sprintf("%s.%s.svc.%s", clusterName, namespace, "cluster.local")
 }
 
 func GetLoadBalancerName(clusterName string) string {
@@ -27,10 +33,6 @@ func GetPasswordFromSecret(secret *v1.Secret) string {
 
 func GetUsernameFromSecret(secret *v1.Secret) string {
 	return string(secret.Data[PostgresClusterSecretUsernameKey])
-}
-
-func GetSecretsForInfrastructures() string {
-	return fmt.Sprintf("%v-secrets", AppName)
 }
 
 func GetClusterSecrets(clusterName string) string {
