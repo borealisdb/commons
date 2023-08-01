@@ -5,6 +5,7 @@ import (
 	"github.com/borealisdb/commons/credentials"
 	"github.com/borealisdb/commons/mocks"
 	"github.com/golang/mock/gomock"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -19,20 +20,26 @@ func TestPG_GetPostgresDSN(t *testing.T) {
 		options  Options
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   string
+		name     string
+		fields   fields
+		args     args
+		want     string
+		doBefore func()
 	}{
 		{
 			name:   "default dsn",
-			fields: fields{CredentialsProvider: nil, ClusterName: "mycluster"},
+			fields: fields{CredentialsProvider: credentials.Environment{}, ClusterName: "mycluster"},
 			args: args{
-				password: "123",
-				options:  Options{},
+				options: Options{},
 			},
-			want: "postgresql://postgres:123@mycluster.default.svc.cluster.local:5432/postgres?sslmode=disable",
+			want: "postgresql://admin:123@myhost:5432/postgres?sslmode=disable",
+			doBefore: func() {
+				os.Setenv("mycluster_CLUSTER_HOSTNAME", "myhost")
+				os.Setenv("mycluster_CLUSTER_USERNAME", "admin")
+				os.Setenv("mycluster_admin_CLUSTER_PASSWORD", "123")
+			},
 		},
+
 		{
 			name:   "dsn with ssl enabled",
 			fields: fields{CredentialsProvider: nil, ClusterName: "mycluster"},
@@ -50,7 +57,6 @@ func TestPG_GetPostgresDSN(t *testing.T) {
 			args: args{
 				password: "123",
 				options: Options{
-					Username:        "admin",
 					Database:        "users",
 					Port:            "5001",
 					Host:            "localhost",
@@ -88,22 +94,26 @@ func TestPG_GetPostgresDSN(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			mockCredentials := mocks.NewMockCredentials(ctrl)
-			if tt.args.options.Host == "" {
-				mockCredentials.EXPECT().
-					GetClusterEndpoint(context.Background(), tt.fields.ClusterName, tt.args.options.Role).
-					Return(credentials.GetClusterEndpointResponse{Endpoint: "mycluster.default.svc.cluster.local"}, nil)
-			}
-			tt.fields.CredentialsProvider = mockCredentials
-			pg := PG{CredentialsProvider: mockCredentials}
-			got, err := pg.GetDSN(tt.fields.ClusterName, tt.args.password, tt.args.options)
-			if err != nil {
-				t.Errorf("GetCredentials() error = %v", err)
+			ctx := context.Background()
+
+			tt.doBefore()
+
+			pg := PG{CredentialsProvider: tt.fields.CredentialsProvider}
+
+			if err := pg.setDefaults(tt.args.options, tt.fields.ClusterName); err != nil {
+				t.Errorf("setDefaults() error = %v", err)
 				return
 			}
-			if got != tt.want {
-				t.Errorf("GetDSN() = %v, want %v", got, tt.want)
+			resp, err := pg.getCredentials(ctx, "")
+			if err != nil {
+				t.Errorf("getCredentials() error = %v", err)
+				return
+			}
+
+			dsn := pg.getDSN(resp.Password, resp.Username)
+
+			if dsn != tt.want {
+				t.Errorf("getDSN() = %v, want %v", dsn, tt.want)
 			}
 		})
 	}
@@ -144,9 +154,7 @@ func TestPG_GetCredentials(t *testing.T) {
 		{
 			name: "different user",
 			fields: fields{
-				options: Options{
-					Username: "admin",
-				},
+				options:     Options{},
 				clusterName: "mycluster",
 				credOptions: credentials.Options{},
 			},
@@ -168,7 +176,7 @@ func TestPG_GetCredentials(t *testing.T) {
 				mockCredentials.EXPECT().
 					GetClusterEndpoint(context.Background(), tt.fields.clusterName, tt.fields.options.Role).
 					Return(credentials.GetClusterEndpointResponse{
-						Endpoint: "mycluster.default.svc.cluster.local",
+						Hostname: "mycluster.default.svc.cluster.local",
 					}, nil)
 			}
 			mockCredentials.EXPECT().
@@ -178,7 +186,7 @@ func TestPG_GetCredentials(t *testing.T) {
 			pg := PG{
 				CredentialsProvider: mockCredentials,
 			}
-			got, err := pg.GetCredentials(context.Background(), tt.fields.clusterName, tt.fields.options)
+			got, err := pg.GetCredentials(context.Background(), tt.fields.clusterName, "", tt.fields.options)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetCredentials() error = %v, wantErr %v", err, tt.wantErr)
 				return

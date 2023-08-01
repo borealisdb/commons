@@ -9,19 +9,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const KubernetesProvider = "kubernetes"
+
 type Kubernetes struct {
 	kubeClient k8sutil.KubernetesClient
-}
-
-func (k *Kubernetes) GetClusterEndpoint(ctx context.Context, clusterName, role string) (GetClusterEndpointResponse, error) {
-	info, err := k.getClusterInfo(ctx, clusterName)
-	if err != nil {
-		return GetClusterEndpointResponse{}, fmt.Errorf("could not getClusterInfo: %v", err)
-	}
-
-	return GetClusterEndpointResponse{
-		Endpoint: constants.GetClusterEndpoint(clusterName, info.Namespace, role),
-	}, nil
 }
 
 func (k *Kubernetes) Init() error {
@@ -49,6 +40,10 @@ func (k *Kubernetes) GetPostgresCredentials(
 		return GetPostgresCredentialsResponse{}, err
 	}
 
+	if username == "" {
+		username = constants.AdminUsername
+	}
+
 	secretName := constants.GetCredentialSecretNameForCluster(username, clusterName)
 	secret, err := k.kubeClient.Secrets(info.Namespace).Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
@@ -62,7 +57,17 @@ func (k *Kubernetes) GetPostgresCredentials(
 	return GetPostgresCredentialsResponse{
 		Username: username,
 		Password: pgPassword,
-		Host:     constants.GetClusterEndpoint(clusterName, info.Namespace, constants.RoleMaster),
+	}, nil
+}
+
+func (k *Kubernetes) GetClusterEndpoint(ctx context.Context, clusterName, role string) (GetClusterEndpointResponse, error) {
+	info, err := k.getClusterInfo(ctx, clusterName)
+	if err != nil {
+		return GetClusterEndpointResponse{}, fmt.Errorf("could not getClusterInfo: %v", err)
+	}
+
+	return GetClusterEndpointResponse{
+		Hostname: constants.GetClusterEndpoint(clusterName, info.Namespace, role),
 	}, nil
 }
 

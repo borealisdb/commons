@@ -3,7 +3,6 @@ package postgresql
 import (
 	"context"
 	"fmt"
-	"github.com/borealisdb/commons/constants"
 	"github.com/borealisdb/commons/credentials"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -12,14 +11,13 @@ import (
 )
 
 type Postgresql interface {
-	GetConnection(ctx context.Context, clusterName string, options Options) (*sqlx.DB, error)
+	GetConnection(ctx context.Context, clusterName string, username string, options Options) (*sqlx.DB, error)
 	Connect(dsn string) (*sqlx.DB, error)
-	GetDSN(clusterName, password string, options Options) (string, error)
-	GetCredentials(ctx context.Context, clusterName string, options Options) (credentials.GetPostgresCredentialsResponse, error)
+	GetDSN(clusterName, password, username string, options Options) (string, error)
+	GetCredentials(ctx context.Context, clusterName string, username string, options Options) (credentials.GetPostgresCredentialsResponse, error)
 }
 
 type Options struct {
-	Username        string
 	Database        string
 	Port            string
 	Host            string // If host is not specified it will work with clusterName
@@ -39,11 +37,11 @@ type PG struct {
 	clusterName         string
 }
 
-func (pg *PG) GetConnection(ctx context.Context, clusterName string, options Options) (*sqlx.DB, error) {
+func (pg *PG) GetConnection(ctx context.Context, clusterName string, username string, options Options) (*sqlx.DB, error) {
 	if err := pg.setDefaults(options, clusterName); err != nil {
 		return &sqlx.DB{}, err
 	}
-	resp, err := pg.getCredentials(ctx)
+	resp, err := pg.getCredentials(ctx, username)
 	if err != nil {
 		return &sqlx.DB{}, fmt.Errorf("could not GetCredentials: %v", err)
 	}
@@ -54,7 +52,7 @@ func (pg *PG) GetConnection(ctx context.Context, clusterName string, options Opt
 		}
 	}
 
-	dsn := pg.getDSN(resp.Password)
+	dsn := pg.getDSN(resp.Password, resp.Username)
 	return pg.Connect(dsn)
 }
 
@@ -69,11 +67,11 @@ func (pg *PG) Connect(dsn string) (*sqlx.DB, error) {
 	return conn, nil
 }
 
-func (pg *PG) getDSN(password string) string {
+func (pg *PG) getDSN(password string, username string) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf(
 		"postgresql://%v:%v@%v:%v/%v?sslmode=%v",
-		pg.options.Username,
+		username,
 		password,
 		pg.options.Host,
 		pg.options.Port,
@@ -87,26 +85,26 @@ func (pg *PG) getDSN(password string) string {
 	return sb.String()
 }
 
-func (pg *PG) GetDSN(clusterName, password string, options Options) (string, error) {
+func (pg *PG) GetDSN(clusterName, password, username string, options Options) (string, error) {
 	if err := pg.setDefaults(options, clusterName); err != nil {
 		return "", fmt.Errorf("could not setDefaults: %v", err)
 	}
 
-	return pg.getDSN(password), nil
+	return pg.getDSN(password, username), nil
 }
 
-func (pg *PG) GetCredentials(ctx context.Context, clusterName string, options Options) (credentials.GetPostgresCredentialsResponse, error) {
+func (pg *PG) GetCredentials(ctx context.Context, clusterName string, username string, options Options) (credentials.GetPostgresCredentialsResponse, error) {
 	if err := pg.setDefaults(options, clusterName); err != nil {
 		return credentials.GetPostgresCredentialsResponse{}, fmt.Errorf("could not setDefaults: %v", err)
 	}
-	return pg.getCredentials(ctx)
+	return pg.getCredentials(ctx, username)
 }
 
-func (pg *PG) getCredentials(ctx context.Context) (credentials.GetPostgresCredentialsResponse, error) {
+func (pg *PG) getCredentials(ctx context.Context, username string) (credentials.GetPostgresCredentialsResponse, error) {
 	postgresCredentials, err := pg.CredentialsProvider.GetPostgresCredentials(
 		ctx,
 		pg.clusterName,
-		pg.options.Username,
+		username,
 		credentials.Options{},
 	)
 	if err != nil {
@@ -128,21 +126,18 @@ func (pg *PG) downloadSSLRootCert(ctx context.Context) error {
 func (pg *PG) setDefaults(options Options, clusterName string) error {
 	pg.clusterName = clusterName
 	pg.options = options
+	resp, err := pg.CredentialsProvider.GetClusterEndpoint(context.Background(), pg.clusterName, pg.options.Role)
 	if pg.options.Host == "" {
-		resp, err := pg.CredentialsProvider.GetClusterEndpoint(context.Background(), pg.clusterName, pg.options.Role)
 		if err != nil {
 			return fmt.Errorf("could not GetClusterEndpoint: %v", err)
 		}
-		pg.options.Host = resp.Endpoint
+		pg.options.Host = resp.Hostname
 	}
 	if pg.options.Port == "" {
-		pg.options.Port = constants.PostgresDefaultPort
+		pg.options.Port = resp.Port
 	}
 	if pg.options.Database == "" {
 		pg.options.Database = "postgres"
-	}
-	if pg.options.Username == "" {
-		pg.options.Username = constants.AdminUsername
 	}
 
 	if pg.options.SSLRootCertPath == "" && pg.options.SSLMode == "" {
