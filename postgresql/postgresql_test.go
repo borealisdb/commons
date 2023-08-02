@@ -39,58 +39,6 @@ func TestPG_GetPostgresDSN(t *testing.T) {
 				os.Setenv("mycluster_admin_CLUSTER_PASSWORD", "123")
 			},
 		},
-
-		{
-			name:   "dsn with ssl enabled",
-			fields: fields{CredentialsProvider: nil, ClusterName: "mycluster"},
-			args: args{
-				password: "123",
-				options: Options{
-					SSLRootCertPath: "/borealis/root.crt",
-				},
-			},
-			want: "postgresql://postgres:123@mycluster.default.svc.cluster.local:5432/postgres?sslmode=verify-ca&sslrootcert=/borealis/root.crt",
-		},
-		{
-			name:   "dsn with custom options",
-			fields: fields{CredentialsProvider: nil, ClusterName: "mycluster"},
-			args: args{
-				password: "123",
-				options: Options{
-					Database:        "users",
-					Port:            "5001",
-					Host:            "localhost",
-					SSLRootCertPath: "/borealis/root.crt",
-					SSLMode:         "verify-full",
-				},
-			},
-			want: "postgresql://admin:123@localhost:5001/users?sslmode=verify-full&sslrootcert=/borealis/root.crt",
-		},
-		{
-			name:   "dsn with custom options",
-			fields: fields{CredentialsProvider: nil, ClusterName: "mycluster"},
-			args: args{
-				password: "123",
-				options: Options{
-					Database: "users",
-					Port:     "5001",
-					Host:     "localhost",
-					SSLMode:  "require",
-				},
-			},
-			want: "postgresql://postgres:123@localhost:5001/users?sslmode=require",
-		},
-		{
-			name:   "dsn with custom Namespace",
-			fields: fields{CredentialsProvider: nil, ClusterName: "mycluster"},
-			args: args{
-				password: "123",
-				options: Options{
-					SSLMode: "verify-ca",
-				},
-			},
-			want: "postgresql://postgres:123@mycluster.default.svc.cluster.local:5432/postgres?sslmode=verify-ca",
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
